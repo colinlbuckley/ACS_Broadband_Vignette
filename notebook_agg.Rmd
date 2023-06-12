@@ -1,0 +1,83 @@
+---
+title: "ACS Broadband - Spatial Analysis"
+author: "Colin Buckley"
+date: "6/05/2023"
+output:
+        html_document:
+                toc: true
+                toc_depth: 3
+                toc_float: true
+                theme: simplex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## **Introduction**
+
+### Objectives
+
+
+### Setup and Data
+
+```{r dependencies, message=FALSE}
+library(tidyverse)
+library(tidycensus)
+library(urbnmapr)
+library(sf)
+library(caret)
+library(rgeoda)
+```
+
+
+```{r acs-pull}
+v21_broadband <- get_acs(geography = "county",
+                     variables = c(count = "DP02_0154",
+                                   pct = "DP02_0154P"),
+                     year = 2021) %>%
+    rename(county_fips = GEOID) %>%
+    pivot_wider(names_from = variable,
+                values_from = c(estimate, moe)) 
+
+```
+
+
+```{r sf-setup}
+counties_sf <- get_urbn_map("counties", sf = TRUE)
+
+spatial_data = left_join(v21_broadband,
+                         counties_sf,
+                         by = "county_fips")
+```
+
+
+```{r test-plot}
+plot1 <- spatial_data %>%
+    ggplot(aes(fill = estimate_pct, geometry = geometry)) +
+    geom_sf(color = "#ffffff", size = 0.1) +
+    coord_sf(datum = NA) +
+    labs(title = "U.S. Households with Broadband Subscription (%) by County, 2021 ACS",
+         caption = expression(paste("Source: U.S. Census Bureau, ", 
+                                    italic("American Community Survey, "),
+                                    "(2021)."))) +
+    scale_fill_gradient(limits = c(37, 100),
+                         breaks = c(40, 50, 60, 70, 80, 90, 100),
+                         labels = c(40, 50, 60, 70, 80, 90, 100)) +
+    theme(panel.background = element_rect(fill = "white"),
+          plot.background = element_rect(fill = "white", color = NA),
+          plot.title = element_text(hjust = 0.5, vjust = -3, 
+                                    color = "#034e7b"),
+          plot.caption = element_text(color = "#034e7b"),
+          legend.direction = "horizontal",
+          legend.position = c(0.77, 0.07),
+          legend.title = element_blank(),
+          legend.text = element_text(size = 8, 
+                                     color = "#034e7b"),
+          legend.key.height = unit(0.3, "cm"),
+          legend.key.width = unit(1.2, "cm"),
+          legend.background = element_rect(fill = "transparent")
+          )
+
+plot1
+```
